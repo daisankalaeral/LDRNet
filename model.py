@@ -4,10 +4,12 @@ import numpy as np
 import torch.nn.functional as F
 import torchvision
 from torchvision.utils import save_image
-# import lightning as pl
+import lightning as pl
 import cv2 as cv
+from loss import calculate_total_loss
+import configs
 
-class LDRNet(nn.Module):
+class LDRNet(pl.LightningModule):
     def __init__(self, n_points = 100, alpha = 0.3, **kwargs):
         super().__init__()
         self.n_points = n_points
@@ -34,13 +36,48 @@ class LDRNet(nn.Module):
     def forward(self, inputs):
         x = self.custom_forward_impl(inputs)
         return x
-import time
+    
+    def _common_step(self, batch, which_loss):
+        image, corner_coords_true = batch
+
+        corner_coords_pred, border_coords_pred = self(image)
+
+        loss = calculate_total_loss(corner_coords_true, corner_coords_pred, border_coords_pred)
+
+        self.log_dict(
+            {
+                which_loss: loss
+            },
+            on_step=True,
+            on_epoch=True,
+            prog_bar=True,
+        )
+
+        return loss
+
+    def training_step(self, batch, batch_idx):
+        loss = self._common_step(batch, "train_loss")
+
+        return loss
+    
+    def validation_step(self, batch, batch_idx):
+        loss = self._common_step(batch, "valid_loss")
+
+        return loss
+    
+    def test_step(self, batch, batch_idx):
+        loss = self._common_step(batch, "test_loss")
+
+        return loss
+    
+    def configure_optimizers(self):
+        optimizer = torch.optim.RMSprop(self.parameters(), eps=1e-7, lr = configs.lr)
+        # optimizer = torch.optim.Adam(self.parameters(), lr = 1e-4)
+        return [optimizer]
 
 if __name__ == '__main__':
 
 
     model = LDRNet(100, 1.0, dropout = 0.2)
     x = torch.rand((1,3,128,128))
-    begin = time.time()
-    y = model(x)
-    print(y[1].shape)
+    print(model(x))

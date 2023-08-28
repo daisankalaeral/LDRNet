@@ -66,14 +66,10 @@ def loss(config, model, x, y, training, coord_size=8, class_list=[1], use_line_l
     y__end = coord_size
     losses = []
     total_loss = 0
-    for class_size in class_list:
-        class_y = y[:, y_end]
-        y_end += 1
-        y__end += class_size + 1
-        class_loss = tf.keras.losses.sparse_categorical_crossentropy(class_y, class_y_, from_logits=True)
-        losses.append(class_loss)
-        total_loss += class_loss
-    # tf.keras.losses.sparse_categorical_crossentropy()
+
+
+
+    # this lreg
     loc_loss = config["loss"]["loss_ratio"] * weighted_loc_loss(coord_y, coord_y_, weights=weights, loss_type="mse")
     total_loss += loc_loss * config["loss"]["class_loss_ratio"]
     losses.append(loc_loss * config["loss"]["class_loss_ratio"])

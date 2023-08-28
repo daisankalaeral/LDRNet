@@ -1,19 +1,8 @@
 import torch
 import torch.nn as nn
+import configs
 
-def locloss(self, y_true, y_pred, weights, loss_type="mse"):
-    if self.point_size == 4:
-        if loss_type == "mse":
-            mse = torch.mean(torch.square(y_pred - y_true) * weights, dim=1)
-            return mse
-        if loss_type == "l1":
-            l1 = torch.mean(torch.abs(y_pred - y_true) * weights, dim=1)
-            return l1
-        if loss_type == "log":
-            log_loss = torch.mean(torch.log(1 + torch.abs(y_pred - y_true)) * weights, dim=1)
-            return log_loss
-
-def lineloss(line):
+def line_loss(line):
         line_x = line[:, 0::2]
         line_y = line[:, 1::2]
         x_diff = line_x[:, 1:] - line_x[:, 0:-1]
@@ -29,3 +18,39 @@ def lineloss(line):
         x_diff_loss = torch.mean(torch.square(x_diff[:, 1:] - x_diff[:, 0:-1]), dim=1)
         y_diff_loss = torch.mean(torch.square(y_diff[:, 1:] - y_diff[:, 0:-1]), dim=1)
         return slop_loss, x_diff_loss + y_diff_loss
+
+def calculate_line_loss(y_pred):
+    
+    total_slop_loss = 0
+    total_diff_loss = 0
+
+    for index in range(4):
+        line = y_pred[:, index * 2:index * 2 + 2]
+        for coord_index in range(configs.size_per_border):
+            line = torch.concat(
+                [line, y_pred[:, 8 + coord_index * 8 + index * 2:8 + coord_index * 8 + index * 2 + 2]], axis=1)
+        line = torch.concat([line, y_pred[:, (index * 2 + 2) % 8:(index * 2 + 2 + 2) % 8]], axis=1)
+        cur_slop_loss, cur_diff_loss = line_loss(line)
+        total_slop_loss += cur_slop_loss
+        total_diff_loss += cur_diff_loss
+    return configs.beta * total_slop_loss + configs.gamma * total_diff_loss
+
+def calculate_total_loss(corner_coords_true, corner_coords_pred, border_coords_pred):
+    coord_start = corner_coords_true[:, 0:8]
+    coord_end = torch.concat([corner_coords_true[:, 2:8], corner_coords_true[:, 0:2]], axis=1)
+    coord_increment = (coord_end - coord_start) / (configs.size_per_border + 1)
+    new_coord = coord_start + coord_increment
+
+    for index in range(1, configs.size_per_border):
+        new_coord = torch.concat([new_coord, coord_start + (index + 1) * coord_increment], axis=1)
+    
+    y = torch.concat([coord_start, new_coord], axis = 1)
+    y_pred = torch.concat([corner_coords_pred, border_coords_pred])
+
+    reg_loss = torch.nn.functional.mse_loss(y_pred, y)
+
+    line_loss = calculate_line_loss(y_pred)
+
+    total_loss = reg_loss + line_loss
+    
+    return total_loss
