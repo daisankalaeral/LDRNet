@@ -10,9 +10,10 @@ from loss import calculate_total_loss
 import configs
 
 class LDRNet(pl.LightningModule):
-    def __init__(self, n_points = 100, alpha = 0.3, **kwargs):
+    def __init__(self, n_points = 100, lr = 1e-3, **kwargs):
         super().__init__()
         self.n_points = n_points
+        self.lr = lr
 
         self.backbone_model = torchvision.models.quantization.mobilenet_v2(weights=torchvision.models.MobileNet_V2_Weights.DEFAULT, quantize = False, **kwargs)
         self.backbone_model.classifier[1] = nn.Linear(self.backbone_model.last_channel, 8)
@@ -71,7 +72,7 @@ class LDRNet(pl.LightningModule):
         return loss
     
     def configure_optimizers(self):
-        optimizer = torch.optim.RMSprop(self.parameters(), eps=1e-7, lr = configs.lr)
+        optimizer = torch.optim.RMSprop(self.parameters(), eps=1e-7, lr = self.lr)
         # optimizer = torch.optim.Adam(self.parameters(), lr = 1e-4)
         return [optimizer]
 

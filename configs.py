@@ -4,3 +4,4 @@ if n_points > 4:
 
 beta = 0.0032
 gamma = 0.0032
+lr = 1e-3
