@@ -45,7 +45,7 @@ def calculate_total_loss(corner_coords_true, corner_coords_pred, border_coords_p
         new_coord = torch.concat([new_coord, coord_start + (index + 1) * coord_increment], axis=1)
     
     y = torch.concat([coord_start, new_coord], axis = 1)
-    y_pred = torch.concat([corner_coords_pred, border_coords_pred])
+    y_pred = torch.concat([corner_coords_pred, border_coords_pred], axis = 1)
 
     reg_loss = torch.nn.functional.mse_loss(y_pred, y)
 

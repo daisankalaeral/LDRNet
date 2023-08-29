@@ -16,7 +16,7 @@ def json_load(path):
         return json.load(f)
 
 class DocDataModule(pl.LightningDataModule):
-    def __init__(self, json_path, data_dir, batch_size, num_workers, load_into_ram):
+    def __init__(self, json_path, data_dir, batch_size, num_workers, load_into_ram = False):
         super().__init__()
         self.batch_size = batch_size
         self.num_workers = num_workers
@@ -79,7 +79,7 @@ class DocDataset(Dataset):
         # mask = self.load_image(self.data_list[index]['mask_path'])
         if self.load_into_ram:
             return self.new_data[index]
-        return self.load_image(self.data[index]['image_path'], torch.tensor(self.data[index]['corners']))
+        return self.load_image(self.data[index]['image_path']), torch.tensor(self.data[index]['corners'])
     
     def load_data_into_ram(self, data_list, ms):
         temp = []
@@ -91,8 +91,7 @@ class DocDataset(Dataset):
     def load_image(self, path):
         path = self.data_dir +"/"+ path
         image = cv.imread(path)
-        image = cv.cvtColor(image, cv.COLOR_BGR2GRAY)
         image = cv.resize(image, (244,244))
         image = transforms.ToTensor()(image)
 
-        return image / 255
+        return image
