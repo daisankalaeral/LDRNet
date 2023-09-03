@@ -5,18 +5,22 @@ import configs
 def line_loss(line):
         line_x = line[:, 0::2]
         line_y = line[:, 1::2]
+        
         x_diff = line_x[:, 1:] - line_x[:, 0:-1]
         y_diff = line_y[:, 1:] - line_y[:, 0:-1]
+        
         x_diff_start = x_diff[:, 1:]
         x_diff_end = x_diff[:, 0:-1]
         y_diff_start = y_diff[:, 1:]
         y_diff_end = y_diff[:, 0:-1]
-        similarity = (x_diff_start * x_diff_end + y_diff_start * y_diff_end) / (
-                torch.sqrt(torch.square(x_diff_start) + torch.square(y_diff_start)) * torch.sqrt(
-                torch.square(x_diff_end) + torch.square(y_diff_end)) + 1e-10)
+        
+        similarity = (x_diff_start * x_diff_end + y_diff_start * y_diff_end) / (torch.sqrt(torch.square(x_diff_start) + torch.square(y_diff_start) + 1e-10) * torch.sqrt(torch.square(x_diff_end) + torch.square(y_diff_end) + 1e-10))
+        
         slop_loss = torch.mean(1 - similarity, dim=1)
+        
         x_diff_loss = torch.mean(torch.square(x_diff[:, 1:] - x_diff[:, 0:-1]), dim=1)
         y_diff_loss = torch.mean(torch.square(y_diff[:, 1:] - y_diff[:, 0:-1]), dim=1)
+        
         return slop_loss, x_diff_loss + y_diff_loss
 
 def calculate_line_loss(y_pred):
@@ -50,7 +54,7 @@ def calculate_total_loss(corner_coords_true, corner_coords_pred, border_coords_p
     reg_loss = torch.nn.functional.mse_loss(y_pred, y)
 
     line_loss = calculate_line_loss(y_pred)
-
-    total_loss = reg_loss + line_loss
+    
+    total_loss = configs.reg_ratio * reg_loss + line_loss
     
     return total_loss
