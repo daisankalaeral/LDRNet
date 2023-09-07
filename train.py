@@ -11,6 +11,7 @@ from data import DocDataModule
 import configs
 from lightning.pytorch.loggers import TensorBoardLogger
 from lightning.pytorch.callbacks import ModelCheckpoint
+# from pytorch_lightning.callbacks.quantizations import QuantizationAwareTraining
 from callback import CustomPrintingCallback
 # from callbacks import MyPrintingCallback, EarlyStopping
 # from pytorch_lightning.profilers import PyTorchProfiler
@@ -18,9 +19,9 @@ from callback import CustomPrintingCallback
 torch.set_float32_matmul_precision("medium") # to make lightning happy
 
 if __name__ == "__main__":
-    logger = TensorBoardLogger("test_augmentation", name = "logs")
-    checkpoint_callback = ModelCheckpoint(dirpath="test_augmentation", save_top_k=3, monitor="val_loss")
-    
+    logger = TensorBoardLogger("efficientnet_all", name = "logs")
+    checkpoint_callback = ModelCheckpoint(dirpath="efficientnet_all", save_top_k=3, monitor="val_loss", save_last = True)
+  
     trainer = pl.Trainer(
         logger = logger,
         accelerator="gpu", 
@@ -33,6 +34,7 @@ if __name__ == "__main__":
         enable_checkpointing = True,
         callbacks = [checkpoint_callback, CustomPrintingCallback()],
         gradient_clip_val = 5.0,
+        # plugins='deepspeed'
         # detect_anomaly=True
     )
 
@@ -54,5 +56,6 @@ if __name__ == "__main__":
     # lr_finder = tuner.lr_find(model, dm, num_training = 500)
     
     model.tuning = False
-    trainer.fit(model, dm)
+    trainer.fit(model, dm, ckpt_path="efficientnet_all/last.ckpt")
+    # trainer.fit(model, dm, ckpt_path="some/path/to/my_checkpoint.ckpt")
 

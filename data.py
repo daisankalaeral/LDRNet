@@ -79,6 +79,7 @@ class DocDataset(Dataset):
         super().__init__()
 
         self.data = data
+        print(len(self.data))
         self.data_dir = data_dir
         self.transform = transform
         self.load_into_ram = load_into_ram

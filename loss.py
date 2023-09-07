@@ -37,7 +37,7 @@ def calculate_line_loss(y_pred):
         cur_slop_loss, cur_diff_loss = line_loss(line)
         total_slop_loss += cur_slop_loss
         total_diff_loss += cur_diff_loss
-    return torch.mean(configs.beta * total_slop_loss + configs.gamma * total_diff_loss)
+    return configs.beta * total_slop_loss + configs.gamma * total_diff_loss
 
 def calculate_total_loss(corner_coords_true, corner_coords_pred, border_coords_pred):
     coord_start = corner_coords_true[:, 0:8]
@@ -50,11 +50,12 @@ def calculate_total_loss(corner_coords_true, corner_coords_pred, border_coords_p
     
     y = torch.concat([coord_start, new_coord], axis = 1)
     y_pred = torch.concat([corner_coords_pred, border_coords_pred], axis = 1)
-
-    reg_loss = torch.nn.functional.mse_loss(y_pred, y)
-
+    
+    reg_loss = torch.nn.functional.mse_loss(y_pred, y, reduction = "none")
+    mean_reg_loss = torch.mean(reg_loss, dim=1)
+    
     line_loss = calculate_line_loss(y_pred)
     
-    total_loss = configs.reg_ratio * reg_loss + line_loss
+    total_loss = torch.mean(configs.reg_ratio * mean_reg_loss + line_loss)
     
     return total_loss
